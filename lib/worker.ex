@@ -37,7 +37,61 @@ defmodule Cachex.Worker do
 
   def handle_call({:read, key}, _from, state) do
     case Map.fetch(state, key) do
-      {:ok, value} ->
+      {:ok, value} ->  ## Server Callbacks
+      def init(:ok) do
+        {:ok, %{}}
+      end
+    
+      def handle_call({:read, key}, _from, state) do
+        case Map.fetch(state, key) do
+          {:ok, value} ->
+            {:reply, value, state}
+          _ ->
+            {:reply, :error, state}
+        end
+      end
+    
+      def handle_call(:stats, _from, state) do
+        {:reply, state, state}
+      end
+    
+      def handle_call({:exits, key}, _from, state) do
+        {:reply, Map.has_key?(state, key), state}
+      end
+    
+      def handle_cast({:write, key, value}, state) do
+        new_state = update_map(state, key, value)
+        {:noreply, new_state}
+      end
+    
+      def handle_cast({:delete, key}, state) do
+        new_state = remove_from_map(state, key)
+        {:noreply, new_state}
+      end
+    
+      def handle_cast(:flush, _state) do
+        {:noreply, %{}}
+      end
+    
+      ## Helper functions
+      defp update_map(state, key, value) do
+        case Map.has_key?(state, key) do
+          true->
+            Map.put(state, key, value)
+          false->
+            Map.put_new(state, key, value)
+        end
+      end
+    
+      defp remove_from_map(state, key) do
+        case Map.has_key?(state, key) do
+          true ->
+            Map.delete(state, key)
+          false ->
+            IO.puts "key not present in map"
+        end
+      end
+    end
         {:reply, value, state}
       _ ->
         {:reply, :error, state}
